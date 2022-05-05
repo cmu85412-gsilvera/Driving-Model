@@ -26,11 +26,12 @@ results_dir = "results.model"
 
 
 def get_all_data(name: str):
+    print("loading cumulative data")
     all_data = []
     assert os.path.exists(data_dir)
     _, _, files = list(os.walk(data_dir))[0]
     for f in sorted(files):
-        if name in f:
+        if name in f and "data" in f:
             data = try_load_data(f.replace(".data", ""))
             assert data is not None
             all_data.append(data)
@@ -48,6 +49,7 @@ def get_all_data(name: str):
 
 def get_model_data(filename: str) -> Dict[str, Any]:
     """try to load cached data from previous runs"""
+    print(f"loading file data: {filename}")
     data = try_load_data(filename)
     if data is not None:
         return data

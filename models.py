@@ -23,6 +23,22 @@ class DrivingModel(torch.nn.Module):
         self.throttle_model = ThrottleModel(features_throttle)
         self.brake_model = BrakeModel(features_brake)
 
+    def load_from_cache(self):
+        print("Loading driving model...")
+        # load steering model
+        steering_ckpt: str = os.path.join(results_dir, "steering.model.50.pt")
+        assert os.path.exists(steering_ckpt)
+        self.steering_model.load_state_dict(torch.load(steering_ckpt))
+        # load throttle model
+        throttle_ckpt: str = os.path.join(results_dir, "throttle.model.35.pt")
+        assert os.path.exists(throttle_ckpt)
+        self.throttle_model.load_state_dict(torch.load(throttle_ckpt))
+        # load brake model
+        brake_ckpt: str = os.path.join(results_dir, "brake.model.35.pt")
+        assert os.path.exists(brake_ckpt)
+        self.brake_model.load_state_dict(torch.load(brake_ckpt))
+        print("...Driving model loading complete")
+
     def forward(
         self, x_steering, x_throttle, x_brake
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -150,10 +166,7 @@ class SymbolModel(torch.nn.Module):
         torch.save(self.state_dict(), filename)
 
     def test_model(
-        self,
-        X: np.ndarray,
-        Y: np.ndarray,
-        t: np.ndarray,
+        self, X: np.ndarray, Y: np.ndarray, t: np.ndarray, visualize_importance=False
     ):
         print_line()
         print(f"Beginning {self.name} test")
@@ -166,6 +179,11 @@ class SymbolModel(torch.nn.Module):
             title=f"{self.name}.test",
             ax_titles=["pred", "actual"],
         )
+
+        if visualize_importance:
+            self.visualize_importances(X)
+
+    def visualize_importances(self, X):
         assert hasattr(self, "feature_names")
         feature_names_small = [f[f.find("_") + 1 :] for f in self.feature_names]
         visualize_importance(

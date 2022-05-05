@@ -37,22 +37,22 @@ argparser.add_argument(
 )
 argparser.add_argument(
     "--load",
-    metavar="L",
-    default=None,
-    type=str,
-    help="path to a saved model state dict checkpoint",
+    metavar="B",
+    default=False,
+    type=bool,
+    help="whether or not to load or train from data",
 )
 argparser.add_argument(
-    "--epochs",
-    metavar="E",
-    default=0,
-    type=int,
-    help="Number of epochs to train this model",
+    "--eval",
+    metavar="B",
+    default=True,
+    type=bool,
+    help="whether or not to evaluate the model",
 )
 args = argparser.parse_args()
 filename: str = args.file
-ckpt: str = args.load
-num_epochs = args.epochs
+load: str = args.load
+eval: str = args.eval
 
 if filename is None:
     print("Need to pass in the recording file")
@@ -142,19 +142,15 @@ test_split = {
 
 
 model = DrivingModel(feature_name_steering, feature_name_throttle, feature_name_brake)
-if ckpt is not None:
-    assert os.path.exists(ckpt)
-    model.load_state_dict(torch.load(ckpt))
+if load == True:
+    model.load_from_cache()
+else:
+    model.begin_training(
+        train_split["X"], train_split["Y"], test_split["X"], test_split["Y"], t[:m]
+    )
 
-model.begin_training(
-    train_split["X"], train_split["Y"], test_split["X"], test_split["Y"], t[:m]
-)
-
-if num_epochs > 0:
-    filename: str = os.path.join(results_dir, "model.pt")
-    torch.save(model.state_dict(), filename)
-
-model.begin_evaluation(test_split["X"], test_split["Y"], t[m:])
+if eval == True:
+    model.begin_evaluation(test_split["X"], test_split["Y"], t[m:])
 
 # TODO: compute overall model
 y_pred = model.forward(
@@ -167,3 +163,4 @@ y_pred = model.forward(
 steering_prediction = y_pred[0].detach().numpy()
 throttle_prediction = y_pred[1].detach().numpy()
 brake_prediction = y_pred[2].detach().numpy()
+
