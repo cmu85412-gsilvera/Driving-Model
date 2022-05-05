@@ -7,17 +7,12 @@ import argparse
 
 """DReyeVR parser imports"""
 from model_utils import (
-    get_model_data,
-    get_all_data,
-    visualize_importance,
-    normalize_batch,
     seed_everything,
     results_dir,
+    load_data,
 )
 from models import DrivingModel
 from visualizer import (
-    plot_versus,
-    plot_vector_vs_time,
     set_results_dir,
 )
 
@@ -58,99 +53,18 @@ if filename is None:
     print("Need to pass in the recording file")
     exit(1)
 
-if "\\" in filename or "." in filename or "/" in filename:
-    data = get_model_data(filename)
-else:
-    data = get_all_data(filename)
-# don't normalize time or steering/throttle/brake
-data = normalize_batch(
-    data,
-    exclude=[
-        "TimestampCarla_data",
-        "UserInputs_Steering",
-        "UserInputs_Throttle",
-        "UserInputs_Brake",
-    ],
-)
+train_split, test_split, features, t_train, t_test = load_data(filename)
 
-"""get data!!!"""
-t = data["TimestampCarla_data"]
-
-"""OUTPUT VARIABLES"""
-Y = {}
-Y["steering"] = data["UserInputs_Steering"]
-Y["throttle"] = data["UserInputs_Throttle"]
-Y["brake"] = data["UserInputs_Brake"]
-
-feature_names = [
-    "EgoVariables_VehicleLoc_0",
-    "EgoVariables_VehicleLoc_1",
-    "EgoVariables_VehicleVel",
-    "EgoVariables_Velocity_0",
-    "EgoVariables_Velocity_1",
-    "EgoVariables_AngularVelocity_1",  # yaw velocity
-    "EyeTracker_LEFTGazeDir_1_s",
-    "EyeTracker_LEFTGazeDir_2_s",
-    "EyeTracker_RIGHTGazeDir_1_s",
-    "EyeTracker_RIGHTGazeDir_2_s",
-    "EyeTracker_LEFTPupilDiameter_s",
-    "EyeTracker_LEFTPupilPosition_0_s",
-    "EyeTracker_LEFTPupilPosition_1_s",
-    "EyeTracker_RIGHTPupilDiameter_s",
-    "EyeTracker_RIGHTPupilPosition_0_s",
-    "EyeTracker_RIGHTPupilPosition_1_s",
-    "EgoVariables_CameraLoc_0",
-    "EgoVariables_CameraLoc_1",
-    "EgoVariables_CameraRot_0",
-    "EgoVariables_CameraRot_1",
-]
-
-feature_name_steering = feature_names + [
-    "UserInputs_Throttle",  # other driving inputs
-    "UserInputs_Brake",  # other driving inputs
-]
-
-feature_name_throttle = feature_names + [
-    "UserInputs_Steering",  # other driving inputs
-    "UserInputs_Brake",  # other driving inputs
-]
-
-feature_name_brake = feature_names + [
-    "UserInputs_Steering",  # other driving inputs
-    "UserInputs_Throttle",  # other driving inputs
-]
-
-
-"""INPUT VARIABLE"""
-X = {}
-X["steering"] = np.array([data[k] for k in feature_name_steering]).T
-X["throttle"] = np.array([data[k] for k in feature_name_throttle]).T
-X["brake"] = np.array([data[k] for k in feature_name_brake]).T
-
-# Split sampled data into training and test
-p = 0.2  # last 20% of the data is for testing
-m = int(len(t) * (1 - p))  # percentage for training
-train_split = {
-    "X": {k: X[k][:m] for k in X.keys()},
-    "Y": {k: Y[k][:m] for k in Y.keys()},
-}
-
-test_split = {
-    "X": {k: X[k][m:] for k in X.keys()},
-    "Y": {k: Y[k][m:] for k in Y.keys()},
-}
-
-
-model = DrivingModel(feature_name_steering, feature_name_throttle, feature_name_brake)
+model = DrivingModel(features)
 if load == True:
     model.load_from_cache()
 else:
     model.begin_training(
-        train_split["X"], train_split["Y"], test_split["X"], test_split["Y"], t[:m]
+        train_split["X"], train_split["Y"], test_split["X"], test_split["Y"], t_train
     )
 
 if eval == True:
-    model.begin_evaluation(test_split["X"], test_split["Y"], t[m:])
+    model.begin_evaluation(test_split["X"], test_split["Y"], t_test)
 
 # TODO: compute overall model
 y_pred = model.forward(
@@ -163,4 +77,3 @@ y_pred = model.forward(
 steering_prediction = y_pred[0].detach().numpy()
 throttle_prediction = y_pred[1].detach().numpy()
 brake_prediction = y_pred[2].detach().numpy()
-

@@ -1,7 +1,7 @@
 import torch
 import os
 import numpy as np
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from captum.attr import IntegratedGradients
 import matplotlib.pyplot as plt
 import pickle
@@ -23,6 +23,93 @@ from visualizer import (
 
 data_dir = "data"
 results_dir = "results.model"
+
+
+def load_data(filename: str) -> Tuple[dict, dict, dict]:
+    if "\\" in filename or "." in filename or "/" in filename:
+        data = get_model_data(filename)
+    else:
+        data = get_all_data(filename)
+    # don't normalize time or steering/throttle/brake
+    data = normalize_batch(
+        data,
+        exclude=[
+            "TimestampCarla_data",
+            "UserInputs_Steering",
+            "UserInputs_Throttle",
+            "UserInputs_Brake",
+        ],
+    )
+
+    """get data!!!"""
+    t = data["TimestampCarla_data"]
+
+    """OUTPUT VARIABLES"""
+    Y = {}
+    Y["steering"] = data["UserInputs_Steering"]
+    Y["throttle"] = data["UserInputs_Throttle"]
+    Y["brake"] = data["UserInputs_Brake"]
+
+    feature_names = [
+        "EgoVariables_VehicleLoc_0",
+        "EgoVariables_VehicleLoc_1",
+        "EgoVariables_VehicleVel",
+        "EgoVariables_Velocity_0",
+        "EgoVariables_Velocity_1",
+        "EgoVariables_AngularVelocity_1",  # yaw velocity
+        "EyeTracker_LEFTGazeDir_1_s",
+        "EyeTracker_LEFTGazeDir_2_s",
+        "EyeTracker_RIGHTGazeDir_1_s",
+        "EyeTracker_RIGHTGazeDir_2_s",
+        "EyeTracker_LEFTPupilDiameter_s",
+        "EyeTracker_LEFTPupilPosition_0_s",
+        "EyeTracker_LEFTPupilPosition_1_s",
+        "EyeTracker_RIGHTPupilDiameter_s",
+        "EyeTracker_RIGHTPupilPosition_0_s",
+        "EyeTracker_RIGHTPupilPosition_1_s",
+        "EgoVariables_CameraLoc_0",
+        "EgoVariables_CameraLoc_1",
+        "EgoVariables_CameraRot_0",
+        "EgoVariables_CameraRot_1",
+    ]
+
+    features: Dict[str, List[str]] = {}
+
+    features["steering"] = feature_names + [
+        "UserInputs_Throttle",  # other driving inputs
+        "UserInputs_Brake",  # other driving inputs
+    ]
+
+    features["throttle"] = feature_names + [
+        "UserInputs_Steering",  # other driving inputs
+        "UserInputs_Brake",  # other driving inputs
+    ]
+
+    features["brake"] = feature_names + [
+        "UserInputs_Steering",  # other driving inputs
+        "UserInputs_Throttle",  # other driving inputs
+    ]
+
+    """INPUT VARIABLE"""
+    X = {}
+    model_types = ["steering", "throttle", "brake"]
+    for model_type in model_types:
+        X[model_type] = np.array([data[k] for k in features[model_type]]).T
+
+    # Split sampled data into training and test
+    p = 0.2  # last 20% of the data is for testing
+    m = int(len(t) * (1 - p))  # percentage for training
+    train_split = {
+        "X": {k: X[k][:m] for k in X.keys()},
+        "Y": {k: Y[k][:m] for k in Y.keys()},
+    }
+
+    test_split = {
+        "X": {k: X[k][m:] for k in X.keys()},
+        "Y": {k: Y[k][m:] for k in Y.keys()},
+    }
+
+    return train_split, test_split, features, t[:m], t[m:]
 
 
 def get_all_data(name: str):

@@ -12,16 +12,11 @@ def print_line():
 
 
 class DrivingModel(torch.nn.Module):
-    def __init__(
-        self,
-        features_steering: List[str],
-        features_throttle: List[str],
-        features_brake: List[str],
-    ):
+    def __init__(self, features: Dict[str, List[str]]):
         super().__init__()
-        self.steering_model = SteeringModel(features_steering)
-        self.throttle_model = ThrottleModel(features_throttle)
-        self.brake_model = BrakeModel(features_brake)
+        self.steering_model = SteeringModel(features["steering"])
+        self.throttle_model = ThrottleModel(features["throttle"])
+        self.brake_model = BrakeModel(features["brake"])
 
     def load_from_cache(self):
         print("Loading driving model...")
