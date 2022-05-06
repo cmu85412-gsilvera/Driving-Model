@@ -34,7 +34,7 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--eval",
         metavar="B",
-        default=True,
+        default=False,
         type=bool,
         help="whether or not to evaluate the model",
     )
@@ -64,14 +64,5 @@ if __name__ == "__main__":
     if eval == True:
         model.begin_evaluation(test_split["X"], test_split["Y"], t_test)
 
-    # TODO: compute overall model
-    y_pred = model.forward(
-        test_split["X"]["steering"],
-        test_split["X"]["throttle"],
-        test_split["X"]["brake"],
-    )
-
-    # convert back to CPU numpy
-    steering_prediction = y_pred[0].detach().numpy()
-    throttle_prediction = y_pred[1].detach().numpy()
-    brake_prediction = y_pred[2].detach().numpy()
+    # symbolic logic for the driving inputs
+    model.symbolic_logic(train_split, test_split, t_train, t_test)

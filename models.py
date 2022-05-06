@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import os
 import torch
 import numpy as np
@@ -81,6 +81,27 @@ class DrivingModel(torch.nn.Module):
         self.steering_model.test_model(X["steering"], Y["steering"], t)
         self.throttle_model.test_model(X["throttle"], Y["throttle"], t)
         self.brake_model.test_model(X["brake"], Y["brake"], t)
+
+    def symbolic_logic(
+        self,
+        training_data: Dict[str, Any],
+        test_data: Dict[str, Any],
+        t_train: np.ndarray,
+        t_test: np.ndarray,
+    ):
+        t = np.concatenate((t_train, t_test))
+
+        # TODO: compute overall model
+        y_pred_train = self.forward(
+            training_data["X"]["steering"],
+            training_data["X"]["throttle"],
+            training_data["X"]["brake"],
+        )
+        y_pred_test = self.forward(
+            test_data["X"]["steering"],
+            test_data["X"]["throttle"],
+            test_data["X"]["brake"],
+        )
 
 
 class SymbolModel(torch.nn.Module):
