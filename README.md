@@ -8,5 +8,5 @@ python example.py
 python model.py --load True --eval True
 
 # train the model from scratch (>1h total runtime)
-python mode.py --eval True
+python mode.py --eval True # this will take a very long time
 ```

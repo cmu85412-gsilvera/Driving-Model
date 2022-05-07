@@ -37,10 +37,22 @@ class DrivingModel(torch.nn.Module):
     def forward(
         self, x_steering, x_throttle, x_brake
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        steer = self.steering_model(torch.Tensor(x_steering))
-        throttle = self.throttle_model(torch.Tensor(x_throttle))
-        brake = self.brake_model(torch.Tensor(x_brake))
-        # TODO: apply some symbolic logic here
+        steer = np.squeeze(
+            self.steering_model(torch.Tensor(x_steering)).detach().numpy()
+        )
+        throttle = np.squeeze(
+            self.throttle_model(torch.Tensor(x_throttle)).detach().numpy()
+        )
+        brake = np.squeeze(self.brake_model(torch.Tensor(x_brake)).detach().numpy())
+
+        # ensure no negative values
+        throttle[throttle < 0] = 0
+        brake[brake < 0] = 0
+
+        # ensure throttle and brake don't occur simultaneously
+        brake[throttle < brake] = 0
+        throttle[brake < throttle] = 0
+
         return (steer, throttle, brake)
 
     def train(self):
@@ -62,7 +74,6 @@ class DrivingModel(torch.nn.Module):
         t: np.ndarray,
     ) -> None:
         self.train()
-        # TODO: parallelize this
         self.steering_model.train_model(
             X["steering"], Y["steering"], Xt["steering"], Yt["steering"], t
         )
@@ -77,7 +88,6 @@ class DrivingModel(torch.nn.Module):
         self, X: Dict[str, np.ndarray], Y: Dict[str, np.ndarray], t: np.ndarray
     ) -> None:
         self.eval()
-        # TODO: can parallelize this?
         self.steering_model.test_model(X["steering"], Y["steering"], t)
         self.throttle_model.test_model(X["throttle"], Y["throttle"], t)
         self.brake_model.test_model(X["brake"], Y["brake"], t)
