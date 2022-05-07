@@ -14,9 +14,19 @@ def print_line():
 class DrivingModel(torch.nn.Module):
     def __init__(self, features: Dict[str, List[str]]):
         super().__init__()
-        self.steering_model = SteeringModel(features["steering"])
-        self.throttle_model = ThrottleModel(features["throttle"])
-        self.brake_model = BrakeModel(features["brake"])
+        self.device = torch.device("cpu")
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+            print(
+                f"Using NVidia GPU ({torch.cuda.get_device_name(0)}) for hardware acceleration"
+            )
+        self.steering_model = SteeringModel(features["steering"], self.device).to(
+            self.device
+        )
+        self.throttle_model = ThrottleModel(features["throttle"], self.device).to(
+            self.device
+        )
+        self.brake_model = BrakeModel(features["brake"], self.device).to(self.device)
 
     def load_from_cache(self):
         print("Loading driving model...")
@@ -38,12 +48,14 @@ class DrivingModel(torch.nn.Module):
         self, x_steering, x_throttle, x_brake
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         steer = np.squeeze(
-            self.steering_model(torch.Tensor(x_steering)).detach().numpy()
+            self.steering_model(torch.Tensor(x_steering)).detach().cpu().numpy()
         )
         throttle = np.squeeze(
-            self.throttle_model(torch.Tensor(x_throttle)).detach().numpy()
+            self.throttle_model(torch.Tensor(x_throttle)).detach().cpu().numpy()
         )
-        brake = np.squeeze(self.brake_model(torch.Tensor(x_brake)).detach().numpy())
+        brake = np.squeeze(
+            self.brake_model(torch.Tensor(x_brake)).detach().cpu().numpy()
+        )
 
         # ensure no negative values
         throttle[throttle < 0] = 0
@@ -74,9 +86,9 @@ class DrivingModel(torch.nn.Module):
         t: np.ndarray,
     ) -> None:
         self.train()
-        self.steering_model.train_model(
-            X["steering"], Y["steering"], Xt["steering"], Yt["steering"], t
-        )
+        # self.steering_model.train_model(
+        #     X["steering"], Y["steering"], Xt["steering"], Yt["steering"], t
+        # )
         self.throttle_model.train_model(
             X["throttle"], Y["throttle"], Xt["throttle"], Yt["throttle"], t
         )
@@ -115,17 +127,18 @@ class DrivingModel(torch.nn.Module):
 
 
 class SymbolModel(torch.nn.Module):
-    def __init__(self, name: str):
+    def __init__(self, name: str, device: torch.DeviceObjType):
         super().__init__()
         self.name = name
         self.loss_fn = torch.nn.MSELoss()
         self.num_epochs: int = 35
         self.lr = 0.001
         self.optimizer_type = torch.optim.Adam
+        self.device = device
 
     def init_optim(self):
-        self.optimizer = self.optimizer_type(self.parameters(), lr=self.lr)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer)
+        self.optimizer = self.optimizer_type(self.parameters(), lr=self.lr, device=self.device)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer).to(self.device)
 
     def train_model(
         self,
@@ -141,15 +154,19 @@ class SymbolModel(torch.nn.Module):
         acc_thresh = np.mean(np.abs(Yt))
         accs = []
         losses = []
+        X_device = torch.Tensor(X).to(self.device)
+        Y_device = torch.Tensor(Y).to(self.device)
+        Xt_device = torch.Tensor(Xt).to(self.device)
+        Yt_device = torch.Tensor(Yt).to(self.device)
         for epoch in range(self.num_epochs):
             start_t = time.time()
             """train model"""
             self.train()
             train_loss = 0
-            for ix, x in enumerate(X):
+            for i in range(len(X)):
                 self.optimizer.zero_grad()
-                data = torch.Tensor(x)
-                desired = torch.Tensor([Y[ix]])
+                data = X_device[i]
+                desired = Y_device[i]
                 outputs = self.forward(data)
                 loss = self.loss_fn(outputs, desired)
                 train_loss += loss.item()
@@ -160,9 +177,9 @@ class SymbolModel(torch.nn.Module):
             correct = 0
             with torch.no_grad():
                 self.eval()
-                for ix, x in enumerate(Xt):
-                    data = torch.Tensor(x)
-                    desired = torch.Tensor([Yt[ix]])
+                for i in range(len(Xt)):
+                    data = Xt_device[i]
+                    desired = Yt_device[i]
                     outputs = self.forward(data)
                     correct += 1 if torch.abs(outputs - desired) < acc_thresh else 0
                     loss_crit = self.loss_fn(outputs, desired)
@@ -176,7 +193,7 @@ class SymbolModel(torch.nn.Module):
                 f"\t Acc: {acc:2.1f}% in {time.time() - start_t:.2f}s"
             )
             full_predictions = np.array(
-                [np.squeeze(self.forward(torch.Tensor(X)).detach().numpy()), Y]
+                [np.squeeze(self.forward(torch.Tensor(X)).detach().cpu().numpy()), Y]
             ).T
             plot_vector_vs_time(
                 xyz=full_predictions,
@@ -216,10 +233,15 @@ class SymbolModel(torch.nn.Module):
             self, feature_names_small, torch.Tensor(X), title=f"{self.name} importances"
         )
 
+    def forward(self, x: torch.Tensor):
+        if x.device != self.device:
+            return self.network(x.to(self.device))
+        return self.network(x)
+
 
 class SteeringModel(SymbolModel):
-    def __init__(self, features: List[str]):
-        super().__init__("steering")
+    def __init__(self, features: List[str], device: torch.DeviceObjType):
+        super().__init__("steering", device)
         self.feature_names = features
         self.in_dim = len(features)
         self.out_dim = 1  # outputting only a single scalar
@@ -234,14 +256,12 @@ class SteeringModel(SymbolModel):
         ]
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
-
-    def forward(self, x):
-        return self.network(x)
+        self = self.to(device)
 
 
 class ThrottleModel(SymbolModel):
-    def __init__(self, features: List[str]):
-        super().__init__("throttle")
+    def __init__(self, features: List[str], device: torch.DeviceObjType):
+        super().__init__("throttle", device)
         self.feature_names = features
         self.in_dim = len(features)
         self.loss_fn = torch.nn.L1Loss()  # more resistant to outliers
@@ -256,15 +276,12 @@ class ThrottleModel(SymbolModel):
         self.optimizer_type = torch.optim.Adagrad
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
-
-    def forward(self, x):
-        # throttle should be always positive
-        return self.network(x)
+        self = self.to(device)
 
 
 class BrakeModel(SymbolModel):
-    def __init__(self, features: List[str]):
-        super().__init__("brake")
+    def __init__(self, features: List[str], device: torch.DeviceObjType):
+        super().__init__("brake", device)
         self.feature_names = features
         self.in_dim = len(features)
         self.out_dim = 1  # outputting only a single scalar
@@ -279,7 +296,4 @@ class BrakeModel(SymbolModel):
         self.optimizer_type = torch.optim.Adagrad
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
-
-    def forward(self, x):
-        # throttle should be always positive
-        return self.network(x)
+        self = self.to(device)

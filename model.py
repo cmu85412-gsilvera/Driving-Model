@@ -14,6 +14,7 @@ if __name__ == "__main__":
 
     seed_everything()
 
+
     """Get data"""
     argparser = argparse.ArgumentParser(description="DReyeVR recording parser")
     argparser.add_argument(
