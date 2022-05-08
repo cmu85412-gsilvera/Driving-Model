@@ -252,7 +252,7 @@ def plot_overlaid(
             t,
             xyz[:, dim],
             color=colours[dim],
-            linewidth=3 / (dim + 1),
+            linewidth=(dim + 1),
             label=subtitles[dim],
         )
 

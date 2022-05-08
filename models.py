@@ -286,7 +286,7 @@ class BrakeModel(SymbolModel):
         self.feature_names = features
         self.in_dim = len(features)
         self.out_dim = 1  # outputting only a single scalar
-        self.loss_fn = torch.nn.L1Loss()  # more resistant to outliers
+        self.loss_fn = torch.nn.MSELoss()  # more resistant to outliers
         layers = [
             torch.nn.Linear(self.in_dim, 128),
             torch.nn.Linear(128, 256),
