@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -227,3 +227,36 @@ def plot_3Dt(
     else:
         filename: str = f"{title}.png"
         save_figure_to_file(fig, filename)
+
+
+def plot_overlaid(
+    data: List[np.ndarray],
+    t: np.ndarray,
+    title: str,
+    subtitles: List[str],
+    colours: List[str] = ["k", "r", "g", "b", "y"],
+):
+    xyz = np.array(data).T
+    n, d = xyz.shape
+    assert xyz.shape == (n, d)
+    assert t.shape == (n,)
+    fig = plt.figure()
+    fig.suptitle(title)
+
+    plt.xlabel(f"time (s)")
+    plt.ylabel(f"")
+    plt.tight_layout()
+
+    for dim in range(d):
+        plt.plot(
+            t,
+            xyz[:, dim],
+            color=colours[dim],
+            linewidth=3 / (dim + 1),
+            label=subtitles[dim],
+        )
+
+    plt.legend()
+
+    filename: str = f"{title}.png"
+    save_figure_to_file(fig, filename)

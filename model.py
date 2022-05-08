@@ -27,7 +27,7 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--load",
         metavar="B",
-        default=False,
+        default=True,
         type=bool,
         help="whether or not to load or train from data",
     )
@@ -61,8 +61,8 @@ if __name__ == "__main__":
             t_train,
         )
 
+    # symbolic logic for the driving inputs
+    model.output(train_split, test_split, t_train, t_test)
+
     if eval == True:
         model.begin_evaluation(test_split["X"], test_split["Y"], t_test)
-
-    # symbolic logic for the driving inputs
-    model.symbolic_logic(train_split, test_split, t_train, t_test)

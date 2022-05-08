@@ -3,7 +3,7 @@ import os
 import torch
 import numpy as np
 import time
-from visualizer import plot_vector_vs_time
+from visualizer import plot_vector_vs_time, plot_overlaid
 from model_utils import visualize_importance, seed_everything, results_dir
 
 
@@ -45,13 +45,15 @@ class DrivingModel(torch.nn.Module):
         )
         brake = np.squeeze(self.brake_model(torch.Tensor(x_brake)).detach().numpy())
 
+        # computes some symbolic logic by ensuring certain characteristics of the model
+
         # ensure no negative values
         throttle[throttle < 0] = 0
         brake[brake < 0] = 0
 
         # ensure throttle and brake don't occur simultaneously
-        brake[throttle < brake] = 0
-        throttle[brake < throttle] = 0
+        brake[throttle > 0] = 0
+        throttle[brake > 0] = 0
 
         return (steer, throttle, brake)
 
@@ -92,7 +94,7 @@ class DrivingModel(torch.nn.Module):
         self.throttle_model.test_model(X["throttle"], Y["throttle"], t)
         self.brake_model.test_model(X["brake"], Y["brake"], t)
 
-    def symbolic_logic(
+    def output(
         self,
         training_data: Dict[str, Any],
         test_data: Dict[str, Any],
@@ -112,6 +114,20 @@ class DrivingModel(torch.nn.Module):
             test_data["X"]["throttle"],
             test_data["X"]["brake"],
         )
+        for i, k in enumerate(["steering", "throttle", "brake"]):
+            plot_overlaid(
+                data=[training_data["Y"][k], y_pred_train[i]],
+                t=t_train,
+                title=f"combined_training_{k}",
+                subtitles=["pred", "actual"],
+            )
+            plot_overlaid(
+                data=[test_data["Y"][k], y_pred_test[i]],
+                t=t_test,
+                title=f"combined_testing_{k}",
+                subtitles=["pred", "actual"],
+                colours=["k", "g"],
+            )
 
 
 class SymbolModel(torch.nn.Module):
