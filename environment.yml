@@ -1,0 +1,15 @@
+name: model
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.8.*
+  - pip
+  - matplotlib
+  - numpy
+  - matplotlib
+  - pytorch
+  - torchvision
+  - captum=0.5.0=0
+  - scikit-learn
+  - scipy
