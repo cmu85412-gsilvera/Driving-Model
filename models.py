@@ -135,7 +135,7 @@ class SymbolModel(torch.nn.Module):
         super().__init__()
         self.name = name
         self.loss_fn = torch.nn.MSELoss()
-        self.num_epochs: int = 35
+        self.num_epochs: int = 50
         self.lr = 0.001
         self.optimizer_type = torch.optim.Adam
 
@@ -266,9 +266,11 @@ class ThrottleModel(SymbolModel):
             torch.nn.Linear(self.in_dim, 128),
             torch.nn.Linear(128, 256),
             torch.nn.Linear(256, 256),
+            torch.nn.Linear(256, 256),
             torch.nn.ReLU(),  # only positive
             torch.nn.Linear(256, self.out_dim),
         ]
+        self.lr = 0.01
         self.optimizer_type = torch.optim.Adagrad
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
@@ -284,12 +286,14 @@ class BrakeModel(SymbolModel):
         self.feature_names = features
         self.in_dim = len(features)
         self.out_dim = 1  # outputting only a single scalar
+        self.loss_fn = torch.nn.L1Loss()  # more resistant to outliers
         layers = [
-            torch.nn.Linear(self.in_dim, 32),
-            torch.nn.Linear(32, 64),
-            torch.nn.Linear(64, 64),
+            torch.nn.Linear(self.in_dim, 128),
+            torch.nn.Linear(128, 256),
+            torch.nn.Linear(256, 256),
+            torch.nn.Linear(256, 256),
             torch.nn.ReLU(),  # only positive
-            torch.nn.Linear(64, self.out_dim),
+            torch.nn.Linear(256, self.out_dim),
         ]
         self.lr = 0.01
         self.optimizer_type = torch.optim.Adagrad

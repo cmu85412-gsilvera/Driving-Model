@@ -5,9 +5,7 @@ from model_utils import (
     load_data,
 )
 from models import DrivingModel
-from visualizer import (
-    set_results_dir,
-)
+from visualizer import set_results_dir
 
 if __name__ == "__main__":
     set_results_dir(results_dir)
@@ -27,7 +25,7 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--load",
         metavar="B",
-        default=True,
+        default=False,
         type=bool,
         help="whether or not to load or train from data",
     )
