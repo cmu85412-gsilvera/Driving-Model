@@ -42,7 +42,7 @@ def plot_versus(
     unit_x_str = f" ({units_x})" if units_x is not None else ""
     unit_y_str = f" ({units_y})" if units_y is not None else ""
 
-    trim_str = " [" + str(trim_start) + ", " + str(trim_end) + "]"
+    trim_str = ""  # " [" + str(trim_start) + ", " + str(trim_end) + "]"
 
     # label your graph, axes, and ticks on each axis
     plt.xlabel(name_x + unit_x_str, fontsize=16)
@@ -175,6 +175,7 @@ def plot_vector_vs_time(
     title: str,
     ax_titles: Optional[Tuple[str]] = ("X", "Y", "Z"),
     silent: Optional[bool] = False,
+    col: str = "b",
 ) -> None:
     n, d = xyz.shape
     assert xyz.shape == (n, d)
@@ -186,7 +187,8 @@ def plot_vector_vs_time(
     for dim in range(d):
         data_dim = xyz[:, dim]
         axs[dim].set(ylabel=ax_titles[dim] if dim < len(ax_titles) else "")
-        axs[dim].plot(t, data_dim)
+        axs[dim].plot(t, data_dim, c=col)
+    fig.text(0.5, 0.02, "time (s)", ha="center")
     filename: str = f"{title}.png"
     save_figure_to_file(fig, filename, silent=silent)
 

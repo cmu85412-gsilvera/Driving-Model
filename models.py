@@ -156,7 +156,7 @@ class DrivingModel(torch.nn.Module):
             xyz=np.array(y_pred_test).T,
             t=t_test,
             ax_titles=["steer", "throttle", "brake"],
-            title="final_model_predictions",
+            title="Driving model predictions",
         )
         plot_vector_vs_time(
             xyz=np.array(
@@ -168,7 +168,8 @@ class DrivingModel(torch.nn.Module):
             ).T,
             t=t_test,
             ax_titles=["steer", "throttle", "brake"],
-            title="final_model_actual",
+            title="Driving model ground truth",
+            col="g",
         )
 
 
