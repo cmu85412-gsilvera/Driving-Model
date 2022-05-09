@@ -36,7 +36,7 @@ To parse and visualize the raw data held in `data/` you can run the `example.py`
 ```bash
 # generate some example outputs to results/
 # needs a file to parse, can use any of the .txt's in data/
-python example.py --file data/jacob21.txt
+python3 example.py --file data/jacob54.txt
 ```
 
 ## Reproduce my results
@@ -45,8 +45,25 @@ To reproduce my results from [the paper](paper/FinalReport.pdf), after downloadi
 
 ```bash
 # load the cached model rather than training from scratch
-python model.py --load
+python3 model.py --load
 ```
+
+## Associated paper results
+(Once you have generated the `.png`s (ie. run both the `model.py` and `example.py` scripts), the links will work)
+| Figure | File |
+| --- | --- |
+| Figure 1 | [`results/userinputs.png`](results/userinputs.png) |
+| Figure 2.1 | [`results.model/loss_(steering)_x_epochs.png`](results.model/loss_(steering)_x_epochs.png) |
+| Figure 2.2 | [`results.model/accuracy_(steering)_x_epochs.png`](results.model/accuracy_(steering)_x_epochs.png) |
+| Figure 3.1 | [`results.model/loss_(throttle)_x_epochs.png`](results.model/loss_(throttle)_x_epochs.png) |
+| Figure 3.2 | [`results.model/accuracy_(throttle)_x_epochs.png`](results.model/accuracy_(throttle)_x_epochs.png) |
+| Figure 4.1 | [`results.model/loss_(brake)_x_epochs.png`](results.model/loss_(brake)_x_epochs.png) |
+| Figure 4.2 | [`results.model/accuracy_(brake)_x_epochs.png`](results.model/accuracy_(brake)_x_epochs.png) |
+| Figure 5 | [`results.model/importances.steering.png`](results.model/importances.steering.png) |
+| Figure 6 | [`results.model/importances.throttle.png`](results.model/importances.throttle.png) |
+| Figure 7 | [`results.model/importances.brake.png`](results.model/importances.brake.png) |
+| Figure 8 | [`results.model/driving_model_predictions.png`](results.model/driving_model_predictions.png) |
+| Figure 9 | [`results.model/driving_model_ground_truth.png`](results.model/driving_model_ground_truth.png) |
 
 ## Train from scratch (the long way)
 
@@ -54,7 +71,7 @@ To train the model from nothing (randomized weights), feel free to omit the `--l
 
 ```bash
 # train the model from scratch (>1h total runtime)
-python model.py # this will take a very long time
+python3 model.py # this will take a very long time
 ```
 
 ## Data
