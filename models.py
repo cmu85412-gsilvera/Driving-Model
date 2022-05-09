@@ -48,12 +48,16 @@ class DrivingModel(torch.nn.Module):
         # computes some symbolic logic by ensuring certain characteristics of the model
 
         # ensure no negative values
-        throttle[throttle < 0] = 0
-        brake[brake < 0] = 0
+        throttle[throttle < 0] *= -0.1  # scale negative by -0.5
+        brake = np.abs(brake) * (0.6 / np.max(brake))  # take absval and scale
+        # throttle[throttle < 0] = 0
+        # brake[brake < 0] = 0
 
         # ensure throttle and brake don't occur simultaneously
-        brake[throttle > 0] = 0
-        throttle[brake > 0] = 0
+        more_throttle = throttle > brake
+        more_brake = throttle < brake
+        # brake[more_throttle] = 0
+        throttle[more_brake] = 0
 
         return (steer, throttle, brake)
 
@@ -132,6 +136,24 @@ class DrivingModel(torch.nn.Module):
                 subtitles=["pred", "actual"],
                 colours=["k", "g"],
             )
+        plot_vector_vs_time(
+            xyz=np.array(y_pred_test).T,
+            t=t_test,
+            ax_titles=["steer", "throttle", "brake"],
+            title="final_model_predictions",
+        )
+        plot_vector_vs_time(
+            xyz=np.array(
+                [
+                    test_data["Y"]["steering"],
+                    test_data["Y"]["throttle"],
+                    test_data["Y"]["brake"],
+                ]
+            ).T,
+            t=t_test,
+            ax_titles=["steer", "throttle", "brake"],
+            title="final_model_actual",
+        )
 
 
 class SymbolModel(torch.nn.Module):
