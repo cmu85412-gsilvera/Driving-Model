@@ -4,7 +4,12 @@ import torch
 import numpy as np
 import time
 from visualizer import plot_vector_vs_time, plot_overlaid, plot_versus
-from model_utils import visualize_importance, seed_everything, results_dir
+from model_utils import (
+    visualize_importance,
+    compute_importances,
+    seed_everything,
+    results_dir,
+)
 
 
 def print_line():
@@ -95,12 +100,11 @@ class DrivingModel(torch.nn.Module):
         X: Dict[str, np.ndarray],
         Y: Dict[str, np.ndarray],
         t: np.ndarray,
-        vis_imp: bool,
     ) -> None:
         self.eval()
-        self.steering_model.test_model(X["steering"], Y["steering"], t, vis_imp=vis_imp)
-        self.throttle_model.test_model(X["throttle"], Y["throttle"], t, vis_imp=vis_imp)
-        self.brake_model.test_model(X["brake"], Y["brake"], t, vis_imp=vis_imp)
+        self.steering_model.test_model(X["steering"], Y["steering"], t)
+        self.throttle_model.test_model(X["throttle"], Y["throttle"], t)
+        self.brake_model.test_model(X["brake"], Y["brake"], t)
 
     def output(
         self,
@@ -164,6 +168,7 @@ class SymbolModel(torch.nn.Module):
         self.num_epochs: int = 50
         self.lr = 0.001
         self.optimizer_type = torch.optim.Adam
+        self.importances = None
 
     def init_optim(self):
         self.optimizer = self.optimizer_type(self.parameters(), lr=self.lr)
@@ -227,11 +232,18 @@ class SymbolModel(torch.nn.Module):
                 ax_titles=["pred", "actual"],
                 silent=True,
             )
+        importances = self.visualize_importances(Xt)  # X or Xt
         self.plot_accs_losses(accs, losses)
         filename: str = os.path.join(results_dir, f"{self.name}.model.pt")
         print(f"saving state dict to {filename}")
         torch.save(
-            {"state_dict": self.state_dict(), "accs": accs, "losses": losses}, filename
+            {
+                "state_dict": self.state_dict(),
+                "accs": accs,
+                "losses": losses,
+                "importances": importances,
+            },
+            filename,
         )
 
     def plot_accs_losses(self, accs: List[float], losses: List[float]) -> None:
@@ -254,6 +266,7 @@ class SymbolModel(torch.nn.Module):
         self.load_state_dict(data["state_dict"])
         accs = data["accs"]
         losses = data["losses"]
+        self.importances = data["importances"]
         self.plot_accs_losses(accs, losses)
         print(f"Loaded {self.name} model!")
 
@@ -262,7 +275,6 @@ class SymbolModel(torch.nn.Module):
         X: np.ndarray,
         Y: np.ndarray,
         t: np.ndarray,
-        vis_imp: Optional[bool] = False,
     ):
         print_line()
         print(f"Beginning {self.name} test")
@@ -275,16 +287,17 @@ class SymbolModel(torch.nn.Module):
             title=f"{self.name}.test",
             ax_titles=["pred", "actual"],
         )
-
-        if vis_imp:
-            self.visualize_importances(X)
+        self.visualize_importances(X)
 
     def visualize_importances(self, X):
         assert hasattr(self, "feature_names")
         feature_names_small = [f[f.find("_") + 1 :] for f in self.feature_names]
+        if self.importances is None:
+            self.importances = compute_importances(self, torch.Tensor(X))
         visualize_importance(
-            self, feature_names_small, torch.Tensor(X), title=f"{self.name} importances"
+            feature_names_small, self.importances, title=f"importances.{self.name}"
         )
+        return self.importances
 
 
 class SteeringModel(SymbolModel):
@@ -293,7 +306,6 @@ class SteeringModel(SymbolModel):
         self.feature_names = features
         self.in_dim = len(features)
         self.out_dim = 1  # outputting only a single scalar
-        self.num_epochs = 50
         layers = [
             torch.nn.Linear(self.in_dim, 64),
             torch.nn.Linear(64, 128),
@@ -320,11 +332,10 @@ class ThrottleModel(SymbolModel):
             torch.nn.Linear(self.in_dim, 128),
             torch.nn.Linear(128, 256),
             torch.nn.Linear(256, 256),
-            torch.nn.Linear(256, 256),
             torch.nn.ReLU(),  # only positive
             torch.nn.Linear(256, self.out_dim),
         ]
-        self.lr = 0.01
+        self.lr = 0.001
         self.optimizer_type = torch.optim.Adagrad
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
