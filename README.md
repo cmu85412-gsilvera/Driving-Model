@@ -25,6 +25,9 @@ conda env create -f environment.yml
 conda activate model
 ```
 
+## Read the paper
+
+The associated final report with this project can be found in [`paper/FinalReport.pdf`](paper/FinalReport.pdf)
 
 ## Visualize the data
 
@@ -38,7 +41,7 @@ python example.py --file data/jacob21.txt
 
 ## Reproduce my results
 
-To reproduce my results from the paper, after downloading the repository and installing the prerequisites, you should be able to simply run `python model.py --load` with the `--load` flag to used the saved model checkpoints I have saved for you. This will output all the results in the `results.model` directory as `.png`'s.
+To reproduce my results from [the paper](paper/FinalReport.pdf), after downloading the repository and installing the prerequisites, you should be able to simply run `python model.py --load` with the `--load` flag to used the saved model checkpoints I have saved for you. This will output all the results in the `results.model` directory as `.png`'s.
 
 ```bash
 # load the cached model rather than training from scratch
@@ -53,3 +56,7 @@ To train the model from nothing (randomized weights), feel free to omit the `--l
 # train the model from scratch (>1h total runtime)
 python model.py # this will take a very long time
 ```
+
+## Data
+
+The input data to this model can be found in [`data/`](data/). There I have accumulated several raw (`.txt`) files that are output from the [`DReyeVR`](https://github.com/HARPLab/DReyeVR) simulator and cached their parsed `.data` counterparts. 
