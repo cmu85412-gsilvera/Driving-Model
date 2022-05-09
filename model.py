@@ -24,7 +24,7 @@ if __name__ == "__main__":
     )
     argparser.add_argument(
         "--load",
-        action="store_false",
+        action="store_true",
         help="whether or not to load (true) or train (false) from data",
     )
     argparser.add_argument(

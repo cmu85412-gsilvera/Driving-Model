@@ -21,17 +21,17 @@ class DrivingModel(torch.nn.Module):
     def load_from_cache(self):
         print("Loading driving model...")
         # load steering model
-        steering_ckpt: str = os.path.join(results_dir, "steering.model.50.pt")
+        steering_ckpt: str = os.path.join(results_dir, "steering.model.pt")
         assert os.path.exists(steering_ckpt)
-        self.steering_model.load_state_dict(torch.load(steering_ckpt))
+        self.steering_model.load_from_ckpt(torch.load(steering_ckpt))
         # load throttle model
-        throttle_ckpt: str = os.path.join(results_dir, "throttle.model.50.pt")
+        throttle_ckpt: str = os.path.join(results_dir, "throttle.model.pt")
         assert os.path.exists(throttle_ckpt)
-        self.throttle_model.load_state_dict(torch.load(throttle_ckpt))
+        self.throttle_model.load_from_ckpt(torch.load(throttle_ckpt))
         # load brake model
-        brake_ckpt: str = os.path.join(results_dir, "brake.model.50.pt")
+        brake_ckpt: str = os.path.join(results_dir, "brake.model.pt")
         assert os.path.exists(brake_ckpt)
-        self.brake_model.load_state_dict(torch.load(brake_ckpt))
+        self.brake_model.load_from_ckpt(torch.load(brake_ckpt))
         print("...Driving model loading complete")
 
     def forward(
@@ -205,25 +205,35 @@ class SymbolModel(torch.nn.Module):
                 ax_titles=["pred", "actual"],
                 silent=True,
             )
+        self.plot_accs_losses(accs, losses)
+        filename: str = os.path.join(results_dir, f"{self.name}.model.pt")
+        print(f"saving state dict to {filename}")
+        torch.save(
+            {"state_dict": self.state_dict(), "accs": accs, "losses": losses}, filename
+        )
+
+    def plot_accs_losses(self, accs: List[float], losses: List[float]) -> None:
         plot_versus(
-            data_x=np.arange(self.num_epochs),
+            data_x=np.arange(len(losses)),
             data_y=losses,
             name_x="epochs",
             name_y=f"loss ({self.name})",
             lines=True,
         )
         plot_versus(
-            data_x=np.arange(self.num_epochs),
+            data_x=np.arange(len(losses)),
             data_y=accs,
             name_x="epochs",
             name_y=f"accuracy ({self.name})",
             lines=True,
         )
-        filename: str = os.path.join(
-            results_dir, f"{self.name}.model.{self.num_epochs}.pt"
-        )
-        print(f"saving state dict to {filename}")
-        torch.save(self.state_dict(), filename)
+
+    def load_from_ckpt(self, data: Dict[str, Any]) -> None:
+        self.load_state_dict(data["state_dict"])
+        accs = data["accs"]
+        losses = data["losses"]
+        self.plot_accs_losses(accs, losses)
+        print(f"Loaded {self.name} model!")
 
     def test_model(
         self,

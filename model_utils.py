@@ -17,9 +17,7 @@ from utils import (
     singleify,
     smooth_arr,
 )
-from visualizer import (
-    save_figure_to_file,
-)
+from visualizer import save_figure_to_file
 
 data_dir = "data"
 results_dir = "results.model"
@@ -254,6 +252,7 @@ def visualize_importance(
     input_tensor.requires_grad_()
     attr, delta = ig.attribute(input_tensor, target=0, return_convergence_delta=True)
     attr = attr.detach().numpy()
+    # TODO: save importances to file
     importances = np.mean(attr, axis=0) / np.abs(np.mean(attr))
     for i in range(len(feature_names)):
         print(f"{feature_names[i]} : {importances[i]:.3f}")
