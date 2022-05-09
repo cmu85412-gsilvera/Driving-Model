@@ -30,7 +30,7 @@ if __name__ == "__main__":
         help="whether or not to load or train from data",
     )
     argparser.add_argument(
-        "--eval",
+        "--importances",
         metavar="B",
         default=False,
         type=bool,
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     filename: str = args.file
     load: str = args.load
-    eval: str = args.eval
+    importances: str = args.importances
 
     if filename is None:
         print("Need to pass in the recording file")
@@ -61,6 +61,6 @@ if __name__ == "__main__":
 
     # symbolic logic for the driving inputs
     model.output(train_split, test_split, t_train, t_test)
-
-    if eval == True:
-        model.begin_evaluation(test_split["X"], test_split["Y"], t_test)
+    model.begin_evaluation(
+        test_split["X"], test_split["Y"], t_test, vis_imp=(importances == True)
+    )

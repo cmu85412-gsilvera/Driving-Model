@@ -3,7 +3,7 @@ import os
 import torch
 import numpy as np
 import time
-from visualizer import plot_vector_vs_time, plot_overlaid
+from visualizer import plot_vector_vs_time, plot_overlaid, plot_versus
 from model_utils import visualize_importance, seed_everything, results_dir
 
 
@@ -25,11 +25,11 @@ class DrivingModel(torch.nn.Module):
         assert os.path.exists(steering_ckpt)
         self.steering_model.load_state_dict(torch.load(steering_ckpt))
         # load throttle model
-        throttle_ckpt: str = os.path.join(results_dir, "throttle.model.35.pt")
+        throttle_ckpt: str = os.path.join(results_dir, "throttle.model.50.pt")
         assert os.path.exists(throttle_ckpt)
         self.throttle_model.load_state_dict(torch.load(throttle_ckpt))
         # load brake model
-        brake_ckpt: str = os.path.join(results_dir, "brake.model.35.pt")
+        brake_ckpt: str = os.path.join(results_dir, "brake.model.50.pt")
         assert os.path.exists(brake_ckpt)
         self.brake_model.load_state_dict(torch.load(brake_ckpt))
         print("...Driving model loading complete")
@@ -87,12 +87,16 @@ class DrivingModel(torch.nn.Module):
         )
 
     def begin_evaluation(
-        self, X: Dict[str, np.ndarray], Y: Dict[str, np.ndarray], t: np.ndarray
+        self,
+        X: Dict[str, np.ndarray],
+        Y: Dict[str, np.ndarray],
+        t: np.ndarray,
+        vis_imp: bool,
     ) -> None:
         self.eval()
-        self.steering_model.test_model(X["steering"], Y["steering"], t)
-        self.throttle_model.test_model(X["throttle"], Y["throttle"], t)
-        self.brake_model.test_model(X["brake"], Y["brake"], t)
+        self.steering_model.test_model(X["steering"], Y["steering"], t, vis_imp=vis_imp)
+        self.throttle_model.test_model(X["throttle"], Y["throttle"], t, vis_imp=vis_imp)
+        self.brake_model.test_model(X["brake"], Y["brake"], t, vis_imp=vis_imp)
 
     def output(
         self,
@@ -201,6 +205,18 @@ class SymbolModel(torch.nn.Module):
                 ax_titles=["pred", "actual"],
                 silent=True,
             )
+        plot_versus(
+            data_x=np.arange(self.num_epochs),
+            data_y=losses,
+            name_x="epochs",
+            name_y=f"loss ({self.name})",
+        )
+        plot_versus(
+            data_x=np.arange(self.num_epochs),
+            data_y=accs,
+            name_x="epochs",
+            name_y=f"accuracy ({self.name})",
+        )
         filename: str = os.path.join(
             results_dir, f"{self.name}.model.{self.num_epochs}.pt"
         )
@@ -208,7 +224,11 @@ class SymbolModel(torch.nn.Module):
         torch.save(self.state_dict(), filename)
 
     def test_model(
-        self, X: np.ndarray, Y: np.ndarray, t: np.ndarray, visualize_importance=False
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        t: np.ndarray,
+        visualize_importance: Optional[bool] = False,
     ):
         print_line()
         print(f"Beginning {self.name} test")
@@ -286,10 +306,11 @@ class BrakeModel(SymbolModel):
         self.feature_names = features
         self.in_dim = len(features)
         self.out_dim = 1  # outputting only a single scalar
-        self.loss_fn = torch.nn.MSELoss()  # more resistant to outliers
+        self.loss_fn = torch.nn.L1Loss()  # more resistant to outliers
         layers = [
             torch.nn.Linear(self.in_dim, 128),
             torch.nn.Linear(128, 256),
+            torch.nn.Linear(256, 256),
             torch.nn.Linear(256, 256),
             torch.nn.Linear(256, 256),
             torch.nn.ReLU(),  # only positive
