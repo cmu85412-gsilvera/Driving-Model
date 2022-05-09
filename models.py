@@ -99,10 +99,7 @@ class DrivingModel(torch.nn.Module):
         )
 
     def begin_evaluation(
-        self,
-        X: Dict[str, np.ndarray],
-        Y: Dict[str, np.ndarray],
-        t: np.ndarray,
+        self, X: Dict[str, np.ndarray], Y: Dict[str, np.ndarray], t: np.ndarray,
     ) -> None:
         self.eval()
         self.steering_model.test_model(X["steering"], Y["steering"], t)
@@ -286,10 +283,7 @@ class SymbolModel(torch.nn.Module):
         print(f"Loaded {self.name} model!")
 
     def test_model(
-        self,
-        X: np.ndarray,
-        Y: np.ndarray,
-        t: np.ndarray,
+        self, X: np.ndarray, Y: np.ndarray, t: np.ndarray,
     ):
         print_line()
         print(f"Beginning {self.name} test")
@@ -314,6 +308,10 @@ class SymbolModel(torch.nn.Module):
         )
         return self.importances
 
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        assert hasattr(self, "network")
+        return self.network(x)
+
 
 class SteeringModel(SymbolModel):
     def __init__(self, features: List[str]):
@@ -331,9 +329,6 @@ class SteeringModel(SymbolModel):
         ]
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
-
-    def forward(self, x):
-        return self.network(x)
 
 
 class ThrottleModel(SymbolModel):
@@ -354,10 +349,6 @@ class ThrottleModel(SymbolModel):
         self.optimizer_type = torch.optim.Adagrad
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
-
-    def forward(self, x):
-        # throttle should be always positive
-        return self.network(x)
 
 
 class BrakeModel(SymbolModel):
@@ -380,7 +371,3 @@ class BrakeModel(SymbolModel):
         self.optimizer_type = torch.optim.Adagrad
         self.network = torch.nn.Sequential(*layers)
         self.init_optim()  # need to initalize optimizer after creating the network
-
-    def forward(self, x):
-        # throttle should be always positive
-        return self.network(x)
