@@ -52,17 +52,20 @@ class DrivingModel(torch.nn.Module):
 
         # computes some symbolic logic by ensuring certain characteristics of the model
 
-        # ensure no negative values
-        throttle[throttle < 0] *= -0.1  # scale negative by -0.5
-        brake = np.abs(brake) * (0.6 / np.max(brake))  # take absval and scale
-        # throttle[throttle < 0] = 0
-        # brake[brake < 0] = 0
+        # normalize outputs
+        steer = (steer - np.mean(steer)) / np.std(steer)
+        throttle = (throttle - np.mean(throttle)) / np.std(throttle)
+        brake = (brake - np.mean(brake)) / np.std(brake)
+
+        throttle[throttle < 0] = 0  # no negative throttle
+        brake[brake < 0] = 0  # no negative brake
 
         # ensure throttle and brake don't occur simultaneously
-        more_throttle = throttle > brake
-        more_brake = throttle < brake
-        # brake[more_throttle] = 0
-        throttle[more_brake] = 0
+        brake_and_throttle = (brake > 0) & (throttle > 0)
+        more_brake = brake > throttle
+        more_throttle = brake < throttle
+        brake[brake_and_throttle] *= more_brake[brake_and_throttle]
+        throttle[brake_and_throttle] *= more_throttle[brake_and_throttle]
 
         return (steer, throttle, brake)
 
@@ -126,20 +129,32 @@ class DrivingModel(torch.nn.Module):
             test_data["X"]["throttle"],
             test_data["X"]["brake"],
         )
+
+        def norm(x):
+            return (x - np.mean(x)) / np.std(x)
+
+        actual_data = {}
         for i, k in enumerate(["steering", "throttle", "brake"]):
+            Y_train = norm(training_data["Y"][k])
+            Y_test = norm(test_data["Y"][k])
+            if k != "steering":
+                Y_train -= Y_train.min()
+                Y_test -= Y_test.min()
+            actual_data[k] = Y_test
             plot_overlaid(
-                data=[training_data["Y"][k], y_pred_train[i]],
+                data=[Y_train, y_pred_train[i]],
                 t=t_train,
                 title=f"combined_training_{k}",
                 subtitles=["pred", "actual"],
             )
             plot_overlaid(
-                data=[test_data["Y"][k], y_pred_test[i]],
+                data=[Y_test, y_pred_test[i]],
                 t=t_test,
                 title=f"combined_testing_{k}",
                 subtitles=["pred", "actual"],
                 colours=["k", "g"],
             )
+
         plot_vector_vs_time(
             xyz=np.array(y_pred_test).T,
             t=t_test,
@@ -149,9 +164,9 @@ class DrivingModel(torch.nn.Module):
         plot_vector_vs_time(
             xyz=np.array(
                 [
-                    test_data["Y"]["steering"],
-                    test_data["Y"]["throttle"],
-                    test_data["Y"]["brake"],
+                    actual_data["steering"],
+                    actual_data["throttle"],
+                    actual_data["brake"],
                 ]
             ).T,
             t=t_test,
