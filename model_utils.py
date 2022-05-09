@@ -239,21 +239,24 @@ def get_model_data(filename: str) -> Dict[str, Any]:
     return data
 
 
-def visualize_importance(
-    model,
-    feature_names,
-    input_tensor,
-    title="Average Feature Importances",
-    axis_title="Features",
-):
-    print("Visualizing feature importances...")
+def compute_importances(model, input_tensor):
+    print(f"Computing {model.name} feature importances")
     # Helper method to print importances and visualize distribution
     ig = IntegratedGradients(model)
     input_tensor.requires_grad_()
     attr, delta = ig.attribute(input_tensor, target=0, return_convergence_delta=True)
     attr = attr.detach().numpy()
-    # TODO: save importances to file
     importances = np.mean(attr, axis=0) / np.abs(np.mean(attr))
+    return importances
+
+
+def visualize_importance(
+    feature_names,
+    importances,
+    title="Average Feature Importances",
+    axis_title="Features",
+):
+    print("Visualizing feature importances...")
     for i in range(len(feature_names)):
         print(f"{feature_names[i]} : {importances[i]:.3f}")
     x_pos = np.arange(len(feature_names))

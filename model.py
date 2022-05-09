@@ -27,15 +27,9 @@ if __name__ == "__main__":
         action="store_true",
         help="whether or not to load (true) or train (false) from data",
     )
-    argparser.add_argument(
-        "--importances",
-        action="store_true",
-        help="whether or not to evaluate the model",
-    )
     args = argparser.parse_args()
     filename: str = args.file
     load_model: bool = args.load
-    vis_imp: bool = args.importances
 
     if filename is None:
         print("Need to pass in the recording file")
@@ -57,4 +51,4 @@ if __name__ == "__main__":
 
     # symbolic logic for the driving inputs
     model.output(train_split, test_split, t_train, t_test)
-    model.begin_evaluation(test_split["X"], test_split["Y"], t_test, vis_imp=vis_imp)
+    model.begin_evaluation(test_split["X"], test_split["Y"], t_test)
