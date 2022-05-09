@@ -24,22 +24,18 @@ if __name__ == "__main__":
     )
     argparser.add_argument(
         "--load",
-        metavar="B",
-        default=False,
-        type=bool,
-        help="whether or not to load or train from data",
+        action="store_false",
+        help="whether or not to load (true) or train (false) from data",
     )
     argparser.add_argument(
         "--importances",
-        metavar="B",
-        default=False,
-        type=bool,
+        action="store_true",
         help="whether or not to evaluate the model",
     )
     args = argparser.parse_args()
     filename: str = args.file
-    load: str = args.load
-    importances: str = args.importances
+    load_model: bool = args.load
+    vis_imp: bool = args.importances
 
     if filename is None:
         print("Need to pass in the recording file")
@@ -48,7 +44,7 @@ if __name__ == "__main__":
     train_split, test_split, features, t_train, t_test = load_data(filename)
 
     model = DrivingModel(features)
-    if load == True:
+    if load_model == True:
         model.load_from_cache()
     else:
         model.begin_training(
@@ -61,6 +57,4 @@ if __name__ == "__main__":
 
     # symbolic logic for the driving inputs
     model.output(train_split, test_split, t_train, t_test)
-    model.begin_evaluation(
-        test_split["X"], test_split["Y"], t_test, vis_imp=(importances == True)
-    )
+    model.begin_evaluation(test_split["X"], test_split["Y"], t_test, vis_imp=vis_imp)

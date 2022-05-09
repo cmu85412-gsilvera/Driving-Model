@@ -35,8 +35,8 @@ conda activate model
 python example.py --file data/jacob21.txt
 
 # load the cached model rather than training from scratch
-python model.py --load True --eval True
+python model.py --load --importances
 
 # train the model from scratch (>1h total runtime)
-python mode.py --eval True # this will take a very long time
+python mode.py --importances # this will take a very long time
 ```

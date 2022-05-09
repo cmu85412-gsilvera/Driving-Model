@@ -210,12 +210,14 @@ class SymbolModel(torch.nn.Module):
             data_y=losses,
             name_x="epochs",
             name_y=f"loss ({self.name})",
+            lines=True,
         )
         plot_versus(
             data_x=np.arange(self.num_epochs),
             data_y=accs,
             name_x="epochs",
             name_y=f"accuracy ({self.name})",
+            lines=True,
         )
         filename: str = os.path.join(
             results_dir, f"{self.name}.model.{self.num_epochs}.pt"
@@ -228,7 +230,7 @@ class SymbolModel(torch.nn.Module):
         X: np.ndarray,
         Y: np.ndarray,
         t: np.ndarray,
-        visualize_importance: Optional[bool] = False,
+        vis_imp: Optional[bool] = False,
     ):
         print_line()
         print(f"Beginning {self.name} test")
@@ -242,7 +244,7 @@ class SymbolModel(torch.nn.Module):
             ax_titles=["pred", "actual"],
         )
 
-        if visualize_importance:
+        if vis_imp:
             self.visualize_importances(X)
 
     def visualize_importances(self, X):
