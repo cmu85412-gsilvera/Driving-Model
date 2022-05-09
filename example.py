@@ -132,10 +132,7 @@ if __name__ == "__main__":
 
     rot3D = data["EgoVariables"]["VehicleRot"][omit_front:]
     plot_vector_vs_time(
-        rot3D,
-        t[omit_front:],
-        "EgoRot PYR (50:)",
-        ax_titles=["P", "Y", "R"],
+        rot3D, t[omit_front:], "EgoRot PYR (50:)", ax_titles=["P", "Y", "R"],
     )
 
     plot_3Dt(
@@ -292,3 +289,17 @@ if __name__ == "__main__":
     plot_vector_vs_time(data["EyeTracker"]["COMBINEDGazeDir"], t, "CombinedGaze")
     plot_vector_vs_time(data["EyeTracker"]["LEFTGazeDir"], t, "LeftGaze")
     plot_vector_vs_time(data["EyeTracker"]["RIGHTGazeDir"], t, "RightGaze")
+
+    plot_vector_vs_time(
+        np.array(
+            [
+                data["UserInputs"]["Steering"],
+                data["UserInputs"]["Throttle"],
+                data["UserInputs"]["Brake"],
+            ]
+        ).T,
+        t,
+        "UserInputs",
+        ax_titles=["steer", "throttle", "brake"],
+    )
+
