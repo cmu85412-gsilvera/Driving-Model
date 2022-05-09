@@ -8,7 +8,7 @@ dependencies:
   - matplotlib
   - numpy
   - matplotlib
-  - pytorch
+  - pytorch==1.11.0
   - torchvision
   - captum=0.5.0=0
   - scikit-learn
